@@ -102,7 +102,7 @@ function SearchPageContent() {
 
   const hasActiveFilters = selectedCategory || selectedLocation || selectedRating > 0 || verifiedOnly;
 
-  const uniqueLocations = [...new Set(businesses.map((b) => b.dzongkhag))].sort();
+  const uniqueLocations = Array.from(new Set(businesses.map((b) => b.dzongkhag))).sort();
 
   return (
     <main className="min-h-screen bg-gray-50">

@@ -60,7 +60,6 @@ export default function CategoryCard({ category }: CategoryCardProps) {
         >
           <IconComponent
             className="h-7 w-7"
-            style={{ color: color || '#FF6B00' }}
           />
         </div>
 

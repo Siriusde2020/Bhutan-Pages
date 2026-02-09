@@ -4,7 +4,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  output: 'export',
+  // output: 'export', // Enable for static deployment with generateStaticParams
   trailingSlash: true,
 };
 
