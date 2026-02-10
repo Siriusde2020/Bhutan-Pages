@@ -10,6 +10,7 @@ import {
   Globe,
   User,
   LogIn,
+  LogOut,
   Briefcase,
   FileText,
   HelpCircle,
@@ -17,6 +18,7 @@ import {
   Info,
   Shield,
 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 const navigation = [
   { name: 'Home', href: '/' },
@@ -38,15 +40,21 @@ const moreLinks = [
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [language, setLanguage] = useState<'EN' | 'DZ'>('EN');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (moreRef.current && !moreRef.current.contains(event.target as Node)) {
         setMoreDropdownOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -60,7 +68,7 @@ export default function Header() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      window.location.href = `/businesses?q=${encodeURIComponent(searchQuery.trim())}`;
+      window.location.href = `/search?q=${encodeURIComponent(searchQuery.trim())}`;
     }
   };
 
@@ -176,21 +184,59 @@ export default function Header() {
                 {language}
               </button>
 
-              {/* Sign In / Register (desktop) */}
+              {/* Auth section (desktop) */}
               <div className="hidden items-center gap-2 sm:flex">
-                <Link
-                  href="/auth/signin"
-                  className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:text-[#FF6B00]"
-                >
-                  <LogIn className="h-4 w-4" />
-                  Sign In
-                </Link>
-                <Link
-                  href="/auth/register"
-                  className="rounded-md bg-[#FF6B00] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#e55f00]"
-                >
-                  Register
-                </Link>
+                {user ? (
+                  <div className="relative" ref={userMenuRef}>
+                    <button
+                      onClick={() => setUserMenuOpen(!userMenuOpen)}
+                      className="flex items-center gap-2 rounded-full border border-gray-200 pl-3 pr-2 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:border-[#FF6B00] hover:text-[#FF6B00]"
+                    >
+                      <span className="max-w-[120px] truncate">{user.name}</span>
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-100 text-[#FF6B00] text-xs font-bold">
+                        {user.name.charAt(0).toUpperCase()}
+                      </div>
+                    </button>
+                    {userMenuOpen && (
+                      <div className="absolute right-0 top-full mt-1 w-56 rounded-lg border border-gray-100 bg-white py-2 shadow-xl">
+                        <div className="px-4 py-2 border-b border-gray-100">
+                          <p className="text-sm font-semibold text-gray-900">{user.name}</p>
+                          <p className="text-xs text-gray-500">{user.email}</p>
+                        </div>
+                        <Link href="/dashboard" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-[#FF6B00]">
+                          <User className="h-4 w-4 text-gray-400" /> Dashboard
+                        </Link>
+                        {user.role === 'admin' && (
+                          <Link href="/admin" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-[#FF6B00]">
+                            <Shield className="h-4 w-4 text-gray-400" /> Admin Panel
+                          </Link>
+                        )}
+                        <button
+                          onClick={() => { logout(); setUserMenuOpen(false); }}
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"
+                        >
+                          <LogOut className="h-4 w-4" /> Sign Out
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <Link
+                      href="/auth/login"
+                      className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:text-[#FF6B00]"
+                    >
+                      <LogIn className="h-4 w-4" />
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/auth/register"
+                      className="rounded-md bg-[#FF6B00] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#e55f00]"
+                    >
+                      Register
+                    </Link>
+                  </>
+                )}
               </div>
 
               {/* Mobile hamburger menu */}
@@ -256,23 +302,32 @@ export default function Header() {
 
               {/* Mobile auth buttons */}
               <div className="border-t border-gray-100 pt-3 sm:hidden">
-                <div className="flex gap-2">
-                  <Link
-                    href="/auth/signin"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-md border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:border-[#FF6B00] hover:text-[#FF6B00]"
-                  >
-                    <User className="h-4 w-4" />
-                    Sign In
-                  </Link>
-                  <Link
-                    href="/auth/register"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex flex-1 items-center justify-center rounded-md bg-[#FF6B00] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#e55f00]"
-                  >
-                    Register
-                  </Link>
-                </div>
+                {user ? (
+                  <div className="space-y-1">
+                    <div className="px-3 py-2 text-sm font-semibold text-gray-900">{user.name}</div>
+                    <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="block rounded-md px-3 py-2.5 text-base font-medium text-gray-700 hover:bg-orange-50 hover:text-[#FF6B00]">Dashboard</Link>
+                    {user.role === 'admin' && <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className="block rounded-md px-3 py-2.5 text-base font-medium text-gray-700 hover:bg-orange-50 hover:text-[#FF6B00]">Admin Panel</Link>}
+                    <button onClick={() => { logout(); setMobileMenuOpen(false); }} className="w-full text-left rounded-md px-3 py-2.5 text-base font-medium text-red-600 hover:bg-red-50">Sign Out</button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Link
+                      href="/auth/login"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-md border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:border-[#FF6B00] hover:text-[#FF6B00]"
+                    >
+                      <User className="h-4 w-4" />
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/auth/register"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex flex-1 items-center justify-center rounded-md bg-[#FF6B00] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#e55f00]"
+                    >
+                      Register
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </div>

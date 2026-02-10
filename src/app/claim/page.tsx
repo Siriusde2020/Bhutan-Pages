@@ -56,6 +56,7 @@ export default function ClaimPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const filteredResults = searchQuery.length >= 2
     ? sampleResults.filter(
@@ -96,12 +97,30 @@ export default function ClaimPage() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setIsSubmitting(true);
-    setTimeout(() => {
+    setSubmitError('');
+    try {
+      const res = await fetch('/api/claims', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId: selectedBusiness?.id,
+          verificationMethod,
+          notes: `Documents: ${Object.entries(uploadedFiles).filter(([, f]) => f).map(([k]) => k).join(', ')}`,
+        }),
+      });
+      if (res.ok) {
+        setIsSubmitted(true);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setSubmitError(data.error || 'Failed to submit claim. Please try again.');
+      }
+    } catch {
+      setSubmitError('An unexpected error occurred. Please try again.');
+    } finally {
       setIsSubmitting(false);
-      setIsSubmitted(true);
-    }, 2000);
+    }
   };
 
   if (isSubmitted) {
@@ -471,6 +490,12 @@ export default function ClaimPage() {
                     By submitting this claim, you confirm that you are the authorized owner or representative of this business. False claims may result in account suspension.
                   </p>
                 </div>
+
+                {submitError && (
+                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                    {submitError}
+                  </div>
+                )}
               </div>
             </div>
           )}

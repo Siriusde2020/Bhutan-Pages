@@ -62,9 +62,31 @@ export default function ContactPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitError, setSubmitError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
+    setSubmitError('');
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          subject: formData.subject,
+          message: formData.message,
+        }),
+      });
+      if (res.ok) {
+        setIsSubmitted(true);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setSubmitError(data.error || 'Failed to send message. Please try again.');
+      }
+    } catch {
+      setSubmitError('An unexpected error occurred. Please try again.');
+    }
   };
 
   return (
@@ -94,6 +116,12 @@ export default function ContactPage() {
                 Fill out the form below and we will get back to you within 24
                 hours.
               </p>
+
+              {submitError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                  {submitError}
+                </div>
+              )}
 
               {isSubmitted ? (
                 <div className="text-center py-12">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Star, MapPin, Phone, Mail, Globe, Shield, Clock, Share2, ChevronRight, CheckCircle, Building2, Calendar, DollarSign, Users, Award, ThumbsUp, MessageSquare, Briefcase, FileText, ExternalLink, Heart } from 'lucide-react';
@@ -13,6 +13,12 @@ export default function BusinessProfilePage() {
   const id = params.id as string;
   const business = getBusinessBySlug(id) || getBusinessById(id);
   const [activeTab, setActiveTab] = useState('overview');
+  const [newRating, setNewRating] = useState(5);
+  const [newTitle, setNewTitle] = useState('');
+  const [newContent, setNewContent] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewSuccess, setReviewSuccess] = useState('');
+  const [reviewError, setReviewError] = useState('');
 
   if (!business) {
     return (
@@ -48,6 +54,51 @@ export default function BusinessProfilePage() {
     const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
     return { star, count, pct };
   });
+
+  // Track page view
+  useEffect(() => {
+    if (business?.id) {
+      fetch(`/api/businesses/${business.id}`).catch(() => {});
+    }
+  }, [business?.id]);
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReviewError('');
+    setReviewSuccess('');
+    setReviewSubmitting(true);
+    try {
+      const res = await fetch(`/api/businesses/${business.id}/reviews`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: newRating, title: newTitle, content: newContent }),
+      });
+      if (res.ok) {
+        setReviewSuccess('Review submitted successfully!');
+        setNewRating(5);
+        setNewTitle('');
+        setNewContent('');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setReviewError(data.error || 'Failed to submit review.');
+      }
+    } catch {
+      setReviewError('An unexpected error occurred.');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
+  const handleMarkHelpful = async (reviewId: string) => {
+    try {
+      await fetch(`/api/reviews/${reviewId}/helpful`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch {
+      // Silently fail
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -228,7 +279,7 @@ export default function BusinessProfilePage() {
                     {review.pros && review.pros.length > 0 && <div className="mt-3"><p className="text-xs font-medium text-green-700">Pros:</p><div className="flex flex-wrap gap-1 mt-1">{review.pros.map(p => <span key={p} className="px-2 py-0.5 bg-green-50 text-green-700 text-xs rounded">{p}</span>)}</div></div>}
                     {review.cons && review.cons.length > 0 && <div className="mt-2"><p className="text-xs font-medium text-red-700">Cons:</p><div className="flex flex-wrap gap-1 mt-1">{review.cons.map(c => <span key={c} className="px-2 py-0.5 bg-red-50 text-red-700 text-xs rounded">{c}</span>)}</div></div>}
                     <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100">
-                      <button className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"><ThumbsUp className="w-3 h-3" /> Helpful ({review.helpful})</button>
+                      <button onClick={() => handleMarkHelpful(review.id)} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"><ThumbsUp className="w-3 h-3" /> Helpful ({review.helpful})</button>
                     </div>
                     {review.ownerResponse && (
                       <div className="mt-3 ml-4 pl-4 border-l-2 border-orange-200 bg-orange-50 rounded-r-lg p-3">
@@ -239,6 +290,65 @@ export default function BusinessProfilePage() {
                   </div>
                 ))}
                 {reviews.length === 0 && <div className="text-center py-12 bg-white rounded-xl border"><MessageSquare className="w-10 h-10 text-gray-300 mx-auto mb-3" /><p className="text-gray-500">No reviews yet. Be the first to review!</p></div>}
+
+                {/* Review Submission Form */}
+                <div className="bg-white rounded-xl border p-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Write a Review</h3>
+                  {reviewSuccess && (
+                    <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">{reviewSuccess}</div>
+                  )}
+                  {reviewError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{reviewError}</div>
+                  )}
+                  <form onSubmit={handleReviewSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setNewRating(star)}
+                            className="focus:outline-none"
+                          >
+                            <Star className={`w-6 h-6 ${star <= newRating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="reviewTitle" className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                      <input
+                        id="reviewTitle"
+                        type="text"
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        placeholder="Summarize your experience"
+                        required
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition text-gray-900 placeholder:text-gray-400"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="reviewContent" className="block text-sm font-medium text-gray-700 mb-1">Review</label>
+                      <textarea
+                        id="reviewContent"
+                        value={newContent}
+                        onChange={(e) => setNewContent(e.target.value)}
+                        placeholder="Share your experience with this business..."
+                        required
+                        rows={4}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition text-gray-900 placeholder:text-gray-400 resize-none"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={reviewSubmitting}
+                      className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-300 text-white font-semibold rounded-lg transition"
+                    >
+                      {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
+                    </button>
+                  </form>
+                </div>
               </div>
             )}
 

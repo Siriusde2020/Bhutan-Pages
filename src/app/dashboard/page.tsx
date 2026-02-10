@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 import {
   Eye,
   Phone,
@@ -19,7 +20,10 @@ import {
   ChevronRight,
   Clock,
   Bell,
+  PlusCircle,
+  Building2,
 } from 'lucide-react';
+import { Business } from '@/types';
 
 const sidebarItems = [
   { label: 'Overview', icon: LayoutDashboard, href: '/dashboard', active: true },
@@ -35,43 +39,71 @@ const quickActions = [
   { label: 'Edit Profile', icon: Edit, href: '/dashboard/settings', color: 'bg-blue-500' },
   { label: 'View Analytics', icon: BarChart3, href: '/dashboard/analytics', color: 'bg-purple-500' },
   { label: 'Respond to Reviews', icon: MessageSquare, href: '/dashboard/reviews', color: 'bg-green-500' },
-  { label: 'Post Job', icon: Briefcase, href: '/dashboard/jobs/new', color: 'bg-amber-500' },
-  { label: 'Create Deal', icon: Tag, href: '/dashboard/deals/new', color: 'bg-pink-500' },
-];
-
-const recentActivity = [
-  { id: 1, type: 'review', message: 'New 5-star review from Karma Wangchuk', time: '2 hours ago' },
-  { id: 2, type: 'view', message: 'Your profile was viewed 45 times today', time: '5 hours ago' },
-  { id: 3, type: 'lead', message: 'New phone inquiry from Pema Dorji', time: '1 day ago' },
-  { id: 4, type: 'review', message: 'Tshering Yangzom left a 4-star review', time: '2 days ago' },
-  { id: 5, type: 'system', message: 'Your profile completeness increased to 75%', time: '3 days ago' },
-  { id: 6, type: 'lead', message: 'New WhatsApp message inquiry', time: '3 days ago' },
-];
-
-const stats = [
-  { label: 'Profile Views', value: '4,520', change: '+12.5%', icon: Eye, color: 'text-blue-600', bg: 'bg-blue-50' },
-  { label: 'Phone Clicks', value: '234', change: '+8.3%', icon: Phone, color: 'text-green-600', bg: 'bg-green-50' },
-  { label: 'Leads This Month', value: '89', change: '+22.1%', icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
-  { label: 'Reviews', value: '12', change: '+2', icon: Star, color: 'text-amber-600', bg: 'bg-amber-50' },
+  { label: 'Post Job', icon: Briefcase, href: '/dashboard/jobs', color: 'bg-amber-500' },
+  { label: 'Create Deal', icon: Tag, href: '/dashboard/deals', color: 'bg-pink-500' },
 ];
 
 export default function DashboardPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { user, loading } = useAuth();
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
 
-  const profileCompleteness = 75;
-  const incompleteItems = ['Add business logo', 'Add opening hours for Sunday', 'Add WhatsApp number'];
+  useEffect(() => {
+    if (!loading && !user) {
+      window.location.href = '/auth/login';
+    }
+  }, [user, loading]);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const res = await fetch('/api/businesses?limit=100');
+        if (res.ok) {
+          const data = await res.json();
+          setBusinesses(data.businesses || []);
+        }
+      } catch {
+        // silently fail
+      } finally {
+        setLoadingData(false);
+      }
+    }
+    if (user) fetchData();
+  }, [user]);
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Find user's businesses (where they are owner)
+  const myBusinesses = businesses.filter(b => b.ownerId === user.id || b.adminIds?.includes(user.id));
+  const primaryBusiness = myBusinesses[0];
+
+  const totalViews = myBusinesses.reduce((s, b) => s + (b.viewCount || 0), 0);
+  const totalContacts = myBusinesses.reduce((s, b) => s + (b.contactCount || 0), 0);
+  const totalReviews = myBusinesses.reduce((s, b) => s + (b.reviewCount || 0), 0);
+  const avgRating = myBusinesses.length > 0
+    ? Math.round((myBusinesses.reduce((s, b) => s + b.rating, 0) / myBusinesses.length) * 10) / 10
+    : 0;
+
+  const stats = [
+    { label: 'Profile Views', value: totalViews.toLocaleString(), change: '+12.5%', icon: Eye, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Phone Clicks', value: totalContacts.toLocaleString(), change: '+8.3%', icon: Phone, color: 'text-green-600', bg: 'bg-green-50' },
+    { label: 'Total Reviews', value: totalReviews.toLocaleString(), change: `${totalReviews}`, icon: Star, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Avg Rating', value: avgRating > 0 ? avgRating.toString() : 'N/A', change: avgRating >= 4 ? 'Great!' : 'Keep going', icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <aside
-        className={`${
-          sidebarOpen ? 'w-64' : 'w-0 overflow-hidden'
-        } bg-white border-r border-gray-200 flex-shrink-0 transition-all duration-300 hidden lg:block`}
-      >
+      <aside className="w-64 bg-white border-r border-gray-200 flex-shrink-0 hidden lg:block">
         <div className="p-6">
           <h2 className="text-lg font-bold text-gray-900">Dashboard</h2>
-          <p className="text-sm text-gray-500">Taj Tashi</p>
+          <p className="text-sm text-gray-500">{primaryBusiness?.name || user.name}</p>
         </div>
         <nav className="px-3 space-y-1">
           {sidebarItems.map((item) => (
@@ -98,9 +130,13 @@ export default function DashboardPage() {
           <div className="max-w-5xl">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold">Welcome back, Karma!</h1>
+                <h1 className="text-2xl font-bold">Welcome back, {user.name.split(' ')[0]}!</h1>
                 <p className="text-orange-100 mt-1">
-                  Here&apos;s how <strong>Taj Tashi</strong> is performing this month.
+                  {primaryBusiness ? (
+                    <>Here&apos;s how <strong>{primaryBusiness.name}</strong> is performing.</>
+                  ) : (
+                    <>Manage your BhutanBiz account and explore the directory.</>
+                  )}
                 </p>
               </div>
               <button className="relative p-2 hover:bg-white/10 rounded-lg transition hidden md:block">
@@ -112,113 +148,111 @@ export default function DashboardPage() {
         </div>
 
         <div className="p-6 md:p-8 max-w-5xl">
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {stats.map((stat) => (
-              <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`w-10 h-10 rounded-lg ${stat.bg} flex items-center justify-center`}>
-                    <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                  </div>
-                  <span className="text-sm font-medium text-green-600 flex items-center gap-0.5">
-                    <TrendingUp className="w-3.5 h-3.5" />
-                    {stat.change}
-                  </span>
-                </div>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                <p className="text-sm text-gray-500 mt-0.5">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Recent Activity */}
-            <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-lg font-bold text-gray-900">Recent Activity</h3>
-                <Link href="/dashboard/analytics" className="text-sm text-orange-600 hover:text-orange-700 font-medium">
-                  View all
+          {myBusinesses.length === 0 && !loadingData ? (
+            /* No business yet */
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center mb-8">
+              <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-gray-900 mb-2">No Business Listed Yet</h3>
+              <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                List your business on BhutanBiz to reach thousands of customers, or claim an existing listing.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <Link href="/claim" className="flex items-center gap-2 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition">
+                  <ShieldCheck className="w-5 h-5" /> Claim a Business
+                </Link>
+                <Link href="/pricing" className="flex items-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition">
+                  <PlusCircle className="w-5 h-5" /> List New Business
                 </Link>
               </div>
-              <div className="space-y-4">
-                {recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-start gap-3">
-                    <div
-                      className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                        activity.type === 'review'
-                          ? 'bg-amber-400'
-                          : activity.type === 'view'
-                          ? 'bg-blue-400'
-                          : activity.type === 'lead'
-                          ? 'bg-green-400'
-                          : 'bg-gray-400'
-                      }`}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-700">{activity.message}</p>
-                      <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {activity.time}
-                      </p>
+            </div>
+          ) : (
+            <>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {stats.map((stat) => (
+                  <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={`w-10 h-10 rounded-lg ${stat.bg} flex items-center justify-center`}>
+                        <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                      </div>
+                      <span className="text-sm font-medium text-green-600 flex items-center gap-0.5">
+                        <TrendingUp className="w-3.5 h-3.5" />
+                        {stat.change}
+                      </span>
                     </div>
+                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                    <p className="text-sm text-gray-500 mt-0.5">{stat.label}</p>
                   </div>
                 ))}
               </div>
-            </div>
 
-            {/* Profile Completeness */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Profile Completeness</h3>
-
-              {/* Circular Progress */}
-              <div className="flex items-center justify-center mb-5">
-                <div className="relative w-32 h-32">
-                  <svg className="w-32 h-32 -rotate-90" viewBox="0 0 128 128">
-                    <circle
-                      cx="64"
-                      cy="64"
-                      r="56"
-                      fill="none"
-                      stroke="#f3f4f6"
-                      strokeWidth="12"
-                    />
-                    <circle
-                      cx="64"
-                      cy="64"
-                      r="56"
-                      fill="none"
-                      stroke="#f97316"
-                      strokeWidth="12"
-                      strokeLinecap="round"
-                      strokeDasharray={`${(profileCompleteness / 100) * 352} 352`}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-3xl font-bold text-gray-900">{profileCompleteness}%</span>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* My Businesses */}
+                <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-lg font-bold text-gray-900">My Businesses</h3>
+                    <Link href="/claim" className="text-sm text-orange-600 hover:text-orange-700 font-medium">
+                      + Add Business
+                    </Link>
+                  </div>
+                  <div className="space-y-4">
+                    {myBusinesses.map((biz) => (
+                      <div key={biz.id} className="flex items-start gap-4 p-4 rounded-lg bg-gray-50">
+                        <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Building2 className="w-6 h-6 text-orange-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <Link href={`/businesses/${biz.slug}`} className="font-semibold text-gray-900 hover:text-orange-600">{biz.name}</Link>
+                          <p className="text-sm text-gray-500">{biz.city}, {biz.dzongkhag}</p>
+                          <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                            <span className="flex items-center gap-1"><Star className="w-3 h-3 text-amber-400" /> {biz.rating} ({biz.reviewCount} reviews)</span>
+                            <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {biz.viewCount} views</span>
+                          </div>
+                        </div>
+                        <Link href={`/businesses/${biz.slug}`} className="text-sm text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1">
+                          View <ChevronRight className="w-4 h-4" />
+                        </Link>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
 
-              <p className="text-sm text-gray-500 text-center mb-4">Complete your profile to attract more customers</p>
-
-              <div className="space-y-2">
-                {incompleteItems.map((item, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm text-gray-600">
-                    <div className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
-                    {item}
+                {/* Account Info */}
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Account</h3>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <span className="text-gray-500">Name</span>
+                      <p className="font-medium text-gray-900">{user.name}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Email</span>
+                      <p className="font-medium text-gray-900">{user.email}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Phone</span>
+                      <p className="font-medium text-gray-900">{user.phone}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Role</span>
+                      <p className="font-medium text-gray-900 capitalize">{user.role.replace(/_/g, ' ')}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Member Since</span>
+                      <p className="font-medium text-gray-900">{user.createdAt?.split('T')[0]}</p>
+                    </div>
                   </div>
-                ))}
+                  <Link
+                    href="/dashboard/settings"
+                    className="mt-4 w-full flex items-center justify-center gap-1 py-2 text-sm font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-lg transition"
+                  >
+                    Edit Settings
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
+                </div>
               </div>
-
-              <Link
-                href="/dashboard/settings"
-                className="mt-4 w-full flex items-center justify-center gap-1 py-2 text-sm font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-lg transition"
-              >
-                Complete Profile
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </div>
+            </>
+          )}
 
           {/* Quick Actions */}
           <div className="mt-6 bg-white rounded-xl border border-gray-200 p-6">

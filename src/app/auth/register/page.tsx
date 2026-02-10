@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Mail, Lock, Eye, EyeOff, User, Phone, CreditCard, Chrome, Apple } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 type AccountType = 'individual' | 'business_owner' | 'investor';
 
@@ -19,6 +20,7 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const { register } = useAuth();
 
   const accountTypes: { value: AccountType; label: string; description: string }[] = [
     { value: 'individual', label: 'Individual', description: 'Browse and review businesses' },
@@ -48,9 +50,15 @@ export default function RegisterPage() {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const result = await register(fullName, email, phone, password, accountType);
+      if (result.success) window.location.href = '/dashboard';
+      else setError(result.error || 'Registration failed');
+    } catch {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (

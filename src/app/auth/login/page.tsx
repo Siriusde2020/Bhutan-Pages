@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Mail, Lock, Eye, EyeOff, Chrome, Apple } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,6 +12,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,10 +22,15 @@ export default function LoginPage() {
       return;
     }
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const result = await login(email, password);
+      if (result.success) window.location.href = '/dashboard';
+      else setError(result.error || 'Login failed');
+    } catch {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
