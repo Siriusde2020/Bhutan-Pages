@@ -573,7 +573,7 @@ export default function HomePage() {
               </p>
             </div>
             <Link
-              href="/guides"
+              href="/resources/guides"
               className="mt-4 sm:mt-0 inline-flex items-center text-orange-600 hover:text-orange-700 font-semibold transition-colors"
             >
               View All Guides
@@ -585,7 +585,7 @@ export default function HomePage() {
             {contentPages.slice(0, 4).map((page) => (
               <Link
                 key={page.id}
-                href={`/guides/${page.slug}`}
+                href={`/content/${page.slug}`}
                 className="group bg-white rounded-xl border border-gray-100 hover:border-orange-200 shadow-sm hover:shadow-md overflow-hidden transition-all duration-200"
               >
                 <div className="p-5">
@@ -835,7 +835,7 @@ export default function HomePage() {
 
           <div className="mt-12 text-center">
             <Link
-              href="/analytics"
+              href="/resources/reports"
               className="inline-flex items-center px-8 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg shadow-lg shadow-orange-500/25 transition-all duration-200"
             >
               Explore Analytics

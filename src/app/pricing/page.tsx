@@ -191,8 +191,9 @@ export default function PricingPage() {
                       Contact Sales
                     </Link>
                   ) : (
-                    <button
-                      className={`w-full px-6 py-3 font-semibold rounded-lg transition-colors ${
+                    <Link
+                      href={`/auth/register?plan=${plan.name.toLowerCase()}`}
+                      className={`w-full block text-center px-6 py-3 font-semibold rounded-lg transition-colors ${
                         isHighlighted
                           ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/25'
                           : plan.price === 0
@@ -201,7 +202,7 @@ export default function PricingPage() {
                       }`}
                     >
                       {plan.cta}
-                    </button>
+                    </Link>
                   )}
 
                   {/* Features */}

@@ -90,7 +90,7 @@ export default function PressPage() {
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Press Releases</h2>
         <div className="space-y-4 mb-16">
           {pressReleases.map((pr) => (
-            <article key={pr.title} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all p-6 group cursor-pointer">
+            <Link key={pr.title} href="/about" className="block bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all p-6 group">
               <div className="flex items-center gap-3 mb-2">
                 <span className={`text-xs font-medium px-2 py-1 rounded-full ${
                   pr.category === 'Milestone' ? 'bg-green-50 text-green-600' :
@@ -103,7 +103,10 @@ export default function PressPage() {
               </div>
               <h3 className="text-lg font-bold text-gray-900 group-hover:text-orange-600 transition-colors">{pr.title}</h3>
               <p className="mt-2 text-sm text-gray-500 leading-relaxed">{pr.excerpt}</p>
-            </article>
+              <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-orange-600">
+                Read more <ArrowRight className="w-3 h-3" />
+              </span>
+            </Link>
           ))}
         </div>
 

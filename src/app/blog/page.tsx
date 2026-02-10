@@ -3,6 +3,7 @@ import { BookOpen, ArrowRight, Clock, User, Tag, TrendingUp, Calendar } from 'lu
 
 export default function BlogPage() {
   const featuredPost = {
+    slug: 'bhutans-digital-economy-revolution',
     title: 'Bhutan\'s Digital Economy Revolution: How Technology is Reshaping Business in the Kingdom',
     excerpt: 'From the launch of the National Digital ID to the growth of Thimphu TechPark, Bhutan is undergoing a digital transformation that is creating unprecedented opportunities for businesses and entrepreneurs.',
     author: 'Sonam Pelden',
@@ -13,6 +14,7 @@ export default function BlogPage() {
 
   const posts = [
     {
+      slug: 'top-10-fastest-growing-industries-2026',
       title: 'Top 10 Fastest-Growing Industries in Bhutan for 2026',
       excerpt: 'Our analysis of business registration data, revenue growth, and market trends reveals the sectors poised for explosive growth this year.',
       author: 'Karma Tshering',
@@ -21,6 +23,7 @@ export default function BlogPage() {
       category: 'Market Insights',
     },
     {
+      slug: 'how-to-get-first-100-customers',
       title: 'How to Get Your First 100 Customers in Bhutan',
       excerpt: 'Practical marketing strategies that work in the Bhutanese context -- from leveraging community networks to digital marketing tactics.',
       author: 'Dechen Wangmo',
@@ -29,6 +32,7 @@ export default function BlogPage() {
       category: 'Business Growth',
     },
     {
+      slug: 'bhutan-ecommerce-regulations',
       title: 'Understanding Bhutan\'s New E-Commerce Regulations',
       excerpt: 'A breakdown of the recently passed e-commerce framework and what it means for online sellers, marketplaces, and digital service providers.',
       author: 'Ugyen Dorji',
@@ -37,6 +41,7 @@ export default function BlogPage() {
       category: 'Regulations',
     },
     {
+      slug: 'ambient-cafe-success-story',
       title: 'Success Story: How Ambient Cafe Grew 250% with BhutanBiz',
       excerpt: 'Sonam Choden shares how a premium listing, customer reviews, and analytics-driven decisions transformed her small Thimphu cafe into a must-visit destination.',
       author: 'Sonam Pelden',
@@ -45,6 +50,7 @@ export default function BlogPage() {
       category: 'Success Stories',
     },
     {
+      slug: 'business-taxes-bhutan-2026',
       title: 'The Complete Guide to Business Taxes in Bhutan (2026)',
       excerpt: 'Everything business owners need to know about BIT, CIT, sales tax, customs duties, and the latest changes from the Department of Revenue & Customs.',
       author: 'Karma Tshering',
@@ -53,6 +59,7 @@ export default function BlogPage() {
       category: 'Finance & Tax',
     },
     {
+      slug: 'customer-reviews-marketing-tool',
       title: 'Why Customer Reviews Are Your Most Powerful Marketing Tool',
       excerpt: 'Data from 8,900+ BhutanBiz listings shows that businesses with 10+ reviews receive 340% more inquiries. Here\'s how to earn more reviews.',
       author: 'Dechen Wangmo',
@@ -61,6 +68,7 @@ export default function BlogPage() {
       category: 'Marketing',
     },
     {
+      slug: 'bhutan-tourism-comeback-sdf-reform',
       title: 'Bhutan\'s Tourism Comeback: Opportunities After SDF Reform',
       excerpt: 'With the adjusted Sustainable Development Fee and new tourism policies, Bhutan is seeing a surge in visitor numbers. What this means for businesses.',
       author: 'Ugyen Dorji',
@@ -69,6 +77,7 @@ export default function BlogPage() {
       category: 'Tourism',
     },
     {
+      slug: 'startup-to-scaleup-lessons',
       title: 'From Startup to Scale-Up: Lessons from Bhutan\'s Top Entrepreneurs',
       excerpt: 'We interviewed 12 of Bhutan\'s most successful entrepreneurs about the challenges they faced and the strategies that helped them scale.',
       author: 'Sonam Pelden',
@@ -107,7 +116,7 @@ export default function BlogPage() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
         {/* Featured Post */}
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-8 md:p-10 text-white mb-12">
+        <Link href={`/blog/${featuredPost.slug}`} className="block bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-8 md:p-10 text-white mb-12 hover:shadow-xl transition-shadow">
           <span className="inline-block text-xs font-semibold bg-white/20 px-3 py-1 rounded-full mb-4">Featured Article</span>
           <h2 className="text-2xl md:text-3xl font-bold leading-tight">{featuredPost.title}</h2>
           <p className="mt-3 text-orange-100 leading-relaxed max-w-2xl">{featuredPost.excerpt}</p>
@@ -116,10 +125,10 @@ export default function BlogPage() {
             <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{featuredPost.date}</span>
             <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{featuredPost.readTime}</span>
           </div>
-          <button className="inline-flex items-center gap-2 mt-6 bg-white text-orange-600 font-semibold px-6 py-3 rounded-lg hover:bg-orange-50 transition-colors">
+          <span className="inline-flex items-center gap-2 mt-6 bg-white text-orange-600 font-semibold px-6 py-3 rounded-lg">
             Read Article <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
+          </span>
+        </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Posts */}
@@ -127,7 +136,7 @@ export default function BlogPage() {
             <h2 className="text-xl font-bold text-gray-900 mb-6">Latest Articles</h2>
             <div className="space-y-6">
               {posts.map((post) => (
-                <article key={post.title} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all p-6 group cursor-pointer">
+                <Link key={post.slug} href={`/blog/${post.slug}`} className="block bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all p-6 group">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full flex items-center gap-1">
                       <Tag className="w-3 h-3" />{post.category}
@@ -145,7 +154,7 @@ export default function BlogPage() {
                       Read <ArrowRight className="w-3 h-3" />
                     </span>
                   </div>
-                </article>
+                </Link>
               ))}
             </div>
           </div>
@@ -172,10 +181,10 @@ export default function BlogPage() {
               </h3>
               <div className="space-y-3">
                 {posts.slice(0, 4).map((post, i) => (
-                  <div key={post.title} className="flex items-start gap-3 cursor-pointer group">
+                  <Link key={post.slug} href={`/blog/${post.slug}`} className="flex items-start gap-3 group">
                     <span className="text-lg font-bold text-gray-300 mt-0.5">{String(i + 1).padStart(2, '0')}</span>
                     <p className="text-sm text-gray-600 group-hover:text-orange-600 transition-colors leading-snug">{post.title}</p>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>

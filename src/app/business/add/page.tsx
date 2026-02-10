@@ -48,7 +48,7 @@ export default function AddBusinessPage() {
           <p className="mt-4 text-lg text-gray-300 max-w-2xl mx-auto">
             Join 8,900+ businesses on Bhutan&apos;s largest business directory. Get discovered by thousands of customers searching for services like yours every day.
           </p>
-          <Link href="/register" className="inline-flex items-center gap-2 mt-8 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-4 rounded-lg shadow-lg shadow-orange-500/25 transition-all text-lg">
+          <Link href="/auth/register?plan=free" className="inline-flex items-center gap-2 mt-8 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-4 rounded-lg shadow-lg shadow-orange-500/25 transition-all text-lg">
             Get Started Free <ArrowRight className="w-5 h-5" />
           </Link>
         </div>
@@ -107,7 +107,7 @@ export default function AddBusinessPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/register" className={`mt-6 block text-center py-3 rounded-lg font-semibold transition-colors ${'popular' in plan && plan.popular ? 'bg-white text-orange-600 hover:bg-orange-50' : 'bg-orange-500 text-white hover:bg-orange-600'}`}>
+              <Link href={`/auth/register?plan=${plan.name.toLowerCase()}`} className={`mt-6 block text-center py-3 rounded-lg font-semibold transition-colors ${'popular' in plan && plan.popular ? 'bg-white text-orange-600 hover:bg-orange-50' : 'bg-orange-500 text-white hover:bg-orange-600'}`}>
                 Get Started
               </Link>
             </div>
@@ -121,7 +121,7 @@ export default function AddBusinessPage() {
           <p className="mt-3 text-gray-400 max-w-lg mx-auto">
             Over 8,900 businesses trust BhutanBiz to connect them with customers. Start your free listing today.
           </p>
-          <Link href="/register" className="inline-flex items-center gap-2 mt-6 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-lg transition-colors">
+          <Link href="/auth/register?plan=free" className="inline-flex items-center gap-2 mt-6 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-lg transition-colors">
             Add Your Business Now <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
