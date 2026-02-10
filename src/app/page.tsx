@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import {
   Search,
@@ -43,6 +44,15 @@ import {
 import { platformAnalytics } from '@/data/analytics';
 
 export default function HomePage() {
+  const [heroSearch, setHeroSearch] = useState('');
+
+  const handleHeroSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (heroSearch.trim()) {
+      window.location.href = `/search?q=${encodeURIComponent(heroSearch.trim())}`;
+    }
+  };
+
   const featuredCategories = getFeaturedCategories();
   const topDzongkhags = getTopDzongkhags(6);
   const topRatedBusinesses = getTopRatedBusinesses(6);
@@ -89,21 +99,23 @@ export default function HomePage() {
             </p>
 
             {/* Search bar */}
-            <div className="mt-10 max-w-2xl mx-auto">
+            <form onSubmit={handleHeroSearch} className="mt-10 max-w-2xl mx-auto">
               <div className="flex items-center bg-white rounded-xl shadow-2xl overflow-hidden">
                 <div className="flex items-center flex-1 px-4 py-4">
                   <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />
                   <input
                     type="text"
+                    value={heroSearch}
+                    onChange={(e) => setHeroSearch(e.target.value)}
                     placeholder="Search businesses, services, or locations..."
                     className="ml-3 w-full text-gray-700 placeholder-gray-400 text-base focus:outline-none"
                   />
                 </div>
-                <button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-4 transition-colors duration-200">
+                <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-4 transition-colors duration-200">
                   Search
                 </button>
               </div>
-            </div>
+            </form>
 
             {/* Popular searches */}
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
