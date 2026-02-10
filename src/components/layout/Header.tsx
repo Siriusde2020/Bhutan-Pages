@@ -193,8 +193,12 @@ export default function Header() {
                       className="flex items-center gap-2 rounded-full border border-gray-200 pl-3 pr-2 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:border-[#FF6B00] hover:text-[#FF6B00]"
                     >
                       <span className="max-w-[120px] truncate">{user.name}</span>
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-100 text-[#FF6B00] text-xs font-bold">
-                        {user.name.charAt(0).toUpperCase()}
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-100 text-[#FF6B00] text-xs font-bold overflow-hidden">
+                        {user.avatar ? (
+                          <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
+                        ) : (
+                          user.name.charAt(0).toUpperCase()
+                        )}
                       </div>
                     </button>
                     {userMenuOpen && (

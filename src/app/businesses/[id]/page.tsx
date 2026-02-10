@@ -3,15 +3,18 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Star, MapPin, Phone, Mail, Globe, Shield, Clock, Share2, ChevronRight, CheckCircle, Building2, Calendar, DollarSign, Users, Award, ThumbsUp, MessageSquare, Briefcase, FileText, ExternalLink, Heart } from 'lucide-react';
-import { getBusinessBySlug, getBusinessById, getRelatedBusinesses } from '@/data/businesses';
-import { getReviewsByBusiness, getJobsByBusiness } from '@/data/content';
+import { Star, MapPin, Phone, Mail, Globe, Clock, Share2, ChevronRight, CheckCircle, Building2, Calendar, DollarSign, Award, ThumbsUp, MessageSquare, Briefcase, Heart } from 'lucide-react';
 import { getCategoryById } from '@/data/categories';
+import { Business, Review, Job } from '@/types';
 
 export default function BusinessProfilePage() {
   const params = useParams();
   const id = params.id as string;
-  const business = getBusinessBySlug(id) || getBusinessById(id);
+  const [business, setBusiness] = useState<Business | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [related, setRelated] = useState<Business[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [newRating, setNewRating] = useState(5);
   const [newTitle, setNewTitle] = useState('');
@@ -19,6 +22,56 @@ export default function BusinessProfilePage() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewSuccess, setReviewSuccess] = useState('');
   const [reviewError, setReviewError] = useState('');
+
+  // Fetch business from API (reads in-memory store, reflects edits)
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const res = await fetch(`/api/businesses/${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setBusiness(data.business);
+
+          // Fetch reviews
+          try {
+            const revRes = await fetch(`/api/businesses/${data.business.id}/reviews`);
+            if (revRes.ok) {
+              const revData = await revRes.json();
+              setReviews(revData.reviews || []);
+            }
+          } catch { /* silent */ }
+
+          // Fetch related businesses (same category)
+          try {
+            const relRes = await fetch(`/api/businesses?category=${data.business.categoryId}&limit=5`);
+            if (relRes.ok) {
+              const relData = await relRes.json();
+              setRelated((relData.businesses || []).filter((b: Business) => b.id !== data.business.id).slice(0, 4));
+            }
+          } catch { /* silent */ }
+
+          // Fetch jobs for this business
+          try {
+            const jobRes = await fetch('/api/jobs');
+            if (jobRes.ok) {
+              const jobData = await jobRes.json();
+              setJobs((jobData.jobs || []).filter((j: Job) => j.businessId === data.business.id));
+            }
+          } catch { /* silent */ }
+        }
+      } catch { /* silent */ }
+      finally { setLoadingData(false); }
+    }
+    fetchData();
+  }, [id]);
+
+  if (loadingData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!business) {
     return (
@@ -34,9 +87,6 @@ export default function BusinessProfilePage() {
   }
 
   const category = getCategoryById(business.categoryId);
-  const reviews = getReviewsByBusiness(business.id);
-  const jobs = getJobsByBusiness(business.id);
-  const related = getRelatedBusinesses(business.id, 4);
   const tabs = ['overview', 'services', 'reviews', 'jobs'];
 
   const trustColor = business.trustScore >= 80 ? 'text-green-600' : business.trustScore >= 60 ? 'text-yellow-600' : 'text-red-600';
@@ -55,13 +105,6 @@ export default function BusinessProfilePage() {
     return { star, count, pct };
   });
 
-  // Track page view
-  useEffect(() => {
-    if (business?.id) {
-      fetch(`/api/businesses/${business.id}`).catch(() => {});
-    }
-  }, [business?.id]);
-
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setReviewError('');
@@ -78,6 +121,11 @@ export default function BusinessProfilePage() {
         setNewRating(5);
         setNewTitle('');
         setNewContent('');
+        const revRes = await fetch(`/api/businesses/${business.id}/reviews`);
+        if (revRes.ok) {
+          const revData = await revRes.json();
+          setReviews(revData.reviews || []);
+        }
       } else {
         const data = await res.json().catch(() => ({}));
         setReviewError(data.error || 'Failed to submit review.');
@@ -91,13 +139,8 @@ export default function BusinessProfilePage() {
 
   const handleMarkHelpful = async (reviewId: string) => {
     try {
-      await fetch(`/api/reviews/${reviewId}/helpful`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-    } catch {
-      // Silently fail
-    }
+      await fetch(`/api/reviews/${reviewId}/helpful`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    } catch { /* silent */ }
   };
 
   return (
@@ -113,6 +156,11 @@ export default function BusinessProfilePage() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
               <div className="flex items-center gap-3 mb-2">
+                {business.logo && (
+                  <div className="w-14 h-14 rounded-lg overflow-hidden bg-white/10 flex-shrink-0">
+                    <img src={business.logo} alt={business.name} className="w-full h-full object-cover" />
+                  </div>
+                )}
                 <h1 className="text-3xl lg:text-4xl font-bold">{business.name}</h1>
                 {business.verificationStatus === 'verified' && <CheckCircle className="w-6 h-6 text-green-400" />}
               </div>
@@ -168,7 +216,6 @@ export default function BusinessProfilePage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Main content */}
           <div className="flex-1">
             {activeTab === 'overview' && (
               <div className="space-y-6">
@@ -185,6 +232,18 @@ export default function BusinessProfilePage() {
                     {business.keywords.map(k => <span key={k} className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">{k}</span>)}
                   </div>
                 </div>
+                {business.photos && business.photos.length > 0 && business.photos.some(p => p.startsWith('data:') || p.startsWith('http')) && (
+                  <div className="bg-white rounded-xl border p-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4">Photos</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {business.photos.filter(p => p.startsWith('data:') || p.startsWith('http')).map((photo, i) => (
+                        <div key={i} className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                          <img src={photo} alt={`${business.name} photo ${i + 1}`} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="bg-white rounded-xl border p-6">
                   <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><Clock className="w-5 h-5" /> Opening Hours</h3>
                   <div className="space-y-2">
@@ -264,10 +323,7 @@ export default function BusinessProfilePage() {
                   <div key={review.id} className="bg-white rounded-xl border p-6">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-gray-900">{review.userName}</span>
-                          {review.verified && <CheckCircle className="w-3.5 h-3.5 text-green-600" />}
-                        </div>
+                        <div className="flex items-center gap-2"><span className="font-semibold text-gray-900">{review.userName}</span>{review.verified && <CheckCircle className="w-3.5 h-3.5 text-green-600" />}</div>
                         <div className="flex items-center gap-2 mt-1">
                           <div className="flex">{Array.from({ length: 5 }).map((_, i) => <Star key={i} className={`w-3.5 h-3.5 ${i < review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />)}</div>
                           <span className="text-xs text-gray-500">{review.createdAt}</span>
@@ -290,63 +346,15 @@ export default function BusinessProfilePage() {
                   </div>
                 ))}
                 {reviews.length === 0 && <div className="text-center py-12 bg-white rounded-xl border"><MessageSquare className="w-10 h-10 text-gray-300 mx-auto mb-3" /><p className="text-gray-500">No reviews yet. Be the first to review!</p></div>}
-
-                {/* Review Submission Form */}
                 <div className="bg-white rounded-xl border p-6">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">Write a Review</h3>
-                  {reviewSuccess && (
-                    <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">{reviewSuccess}</div>
-                  )}
-                  {reviewError && (
-                    <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{reviewError}</div>
-                  )}
+                  {reviewSuccess && <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">{reviewSuccess}</div>}
+                  {reviewError && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{reviewError}</div>}
                   <form onSubmit={handleReviewSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            type="button"
-                            onClick={() => setNewRating(star)}
-                            className="focus:outline-none"
-                          >
-                            <Star className={`w-6 h-6 ${star <= newRating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <label htmlFor="reviewTitle" className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                      <input
-                        id="reviewTitle"
-                        type="text"
-                        value={newTitle}
-                        onChange={(e) => setNewTitle(e.target.value)}
-                        placeholder="Summarize your experience"
-                        required
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition text-gray-900 placeholder:text-gray-400"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="reviewContent" className="block text-sm font-medium text-gray-700 mb-1">Review</label>
-                      <textarea
-                        id="reviewContent"
-                        value={newContent}
-                        onChange={(e) => setNewContent(e.target.value)}
-                        placeholder="Share your experience with this business..."
-                        required
-                        rows={4}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition text-gray-900 placeholder:text-gray-400 resize-none"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={reviewSubmitting}
-                      className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-300 text-white font-semibold rounded-lg transition"
-                    >
-                      {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
-                    </button>
+                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Rating</label><div className="flex items-center gap-1">{[1, 2, 3, 4, 5].map((star) => (<button key={star} type="button" onClick={() => setNewRating(star)} className="focus:outline-none"><Star className={`w-6 h-6 ${star <= newRating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} /></button>))}</div></div>
+                    <div><label htmlFor="reviewTitle" className="block text-sm font-medium text-gray-700 mb-1">Title</label><input id="reviewTitle" type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Summarize your experience" required className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition text-gray-900 placeholder:text-gray-400" /></div>
+                    <div><label htmlFor="reviewContent" className="block text-sm font-medium text-gray-700 mb-1">Review</label><textarea id="reviewContent" value={newContent} onChange={(e) => setNewContent(e.target.value)} placeholder="Share your experience with this business..." required rows={4} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition text-gray-900 placeholder:text-gray-400 resize-none" /></div>
+                    <button type="submit" disabled={reviewSubmitting} className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-300 text-white font-semibold rounded-lg transition">{reviewSubmitting ? 'Submitting...' : 'Submit Review'}</button>
                   </form>
                 </div>
               </div>
@@ -398,7 +406,9 @@ export default function BusinessProfilePage() {
                 <div className="space-y-3">
                   {related.map(r => (
                     <Link key={r.id} href={`/businesses/${r.slug}`} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
-                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center"><Building2 className="w-5 h-5 text-orange-600" /></div>
+                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center overflow-hidden">
+                        {r.logo ? <img src={r.logo} alt="" className="w-full h-full object-cover" /> : <Building2 className="w-5 h-5 text-orange-600" />}
+                      </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">{r.name}</p>
                         <div className="flex items-center gap-1"><Star className="w-3 h-3 text-amber-400 fill-amber-400" /><span className="text-xs text-gray-500">{r.rating}</span></div>

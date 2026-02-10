@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     const verifiedParam = searchParams.get('verified');
     const verified = verifiedParam === 'true' ? true : undefined;
     const sort = searchParams.get('sort') || undefined;
+    const status = searchParams.get('status') || undefined;
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '20', 10);
 
@@ -30,6 +31,7 @@ export async function GET(request: NextRequest) {
       rating,
       verified,
       sort,
+      status,
     });
 
     const totalResults = allResults.length;

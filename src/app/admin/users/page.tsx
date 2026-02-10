@@ -1,34 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, ChevronLeft, Shield, User, Edit, CheckCircle, X, Save } from 'lucide-react';
+import { Search, ChevronLeft, User, Edit, CheckCircle, X, Save } from 'lucide-react';
 
 interface UserItem {
-  id: string; name: string; email: string; role: string; status: string; joined: string;
+  id: string; name: string; email: string; role: string; isVerified: boolean; createdAt: string; phone?: string; avatar?: string;
 }
-
-const initialUsers: UserItem[] = [
-  { id: 'u1', name: 'Karma Dorji', email: 'karma@email.com', role: 'business_owner', status: 'active', joined: '2025-06-15' },
-  { id: 'u2', name: 'Tshering Yangdon', email: 'tshering@email.com', role: 'user', status: 'active', joined: '2025-08-20' },
-  { id: 'u3', name: 'Pema Wangchuk', email: 'pema@email.com', role: 'admin', status: 'active', joined: '2024-01-10' },
-  { id: 'u4', name: 'Dorji Tshering', email: 'dorji@email.com', role: 'business_owner', status: 'active', joined: '2025-11-05' },
-  { id: 'u5', name: 'Kinley Wangmo', email: 'kinley@email.com', role: 'moderator', status: 'active', joined: '2025-03-22' },
-  { id: 'u6', name: 'Sarah Mitchell', email: 'sarah@email.com', role: 'investor', status: 'active', joined: '2025-09-12' },
-  { id: 'u7', name: 'James Cooper', email: 'james@email.com', role: 'user', status: 'active', joined: '2026-01-08' },
-  { id: 'u8', name: 'Sonam Tenzin', email: 'sonam@email.com', role: 'analyst', status: 'active', joined: '2025-07-30' },
-  { id: 'u9', name: 'Ugyen Choden', email: 'ugyen@email.com', role: 'government', status: 'active', joined: '2025-04-18' },
-  { id: 'u10', name: 'Michael Chen', email: 'michael@email.com', role: 'user', status: 'suspended', joined: '2025-10-01' },
-];
 
 export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
   const [editRole, setEditRole] = useState('');
   const [editStatus, setEditStatus] = useState('');
   const [actionMsg, setActionMsg] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Fetch users from API
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        const res = await fetch('/api/users');
+        if (res.ok) {
+          const data = await res.json();
+          setUsers(data.users || []);
+        }
+      } catch { /* silent */ }
+      finally { setLoadingData(false); }
+    }
+    fetchUsers();
+  }, []);
 
   const filtered = users.filter(u => {
     const matchSearch = !search || u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase());
@@ -38,22 +42,52 @@ export default function AdminUsersPage() {
 
   const roleColors: Record<string, string> = { admin: 'bg-red-100 text-red-700', moderator: 'bg-purple-100 text-purple-700', business_owner: 'bg-blue-100 text-blue-700', investor: 'bg-green-100 text-green-700', government: 'bg-amber-100 text-amber-700', analyst: 'bg-cyan-100 text-cyan-700', user: 'bg-gray-100 text-gray-700' };
 
-  const openEdit = (u: UserItem) => { setEditingUser(u); setEditRole(u.role); setEditStatus(u.status); };
+  const openEdit = (u: UserItem) => { setEditingUser(u); setEditRole(u.role); setEditStatus(u.isVerified ? 'active' : 'suspended'); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editingUser) return;
-    setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, role: editRole, status: editStatus } : u));
-    setEditingUser(null);
-    setActionMsg('User updated successfully!');
-    setTimeout(() => setActionMsg(''), 3000);
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/users/${editingUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: editRole, status: editStatus }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, role: data.user.role, isVerified: data.user.isVerified } : u));
+        setEditingUser(null);
+        setActionMsg('User updated successfully!');
+        setTimeout(() => setActionMsg(''), 3000);
+      }
+    } catch { /* silent */ }
+    finally { setSaving(false); }
   };
 
-  const toggleStatus = (u: UserItem) => {
-    const newStatus = u.status === 'active' ? 'suspended' : 'active';
-    setUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, status: newStatus } : usr));
-    setActionMsg(`User ${newStatus === 'active' ? 'activated' : 'suspended'} successfully.`);
-    setTimeout(() => setActionMsg(''), 3000);
+  const toggleStatus = async (u: UserItem) => {
+    const newStatus = u.isVerified ? 'suspended' : 'active';
+    try {
+      const res = await fetch(`/api/users/${u.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, isVerified: data.user.isVerified } : usr));
+        setActionMsg(`User ${newStatus === 'active' ? 'activated' : 'suspended'} successfully.`);
+        setTimeout(() => setActionMsg(''), 3000);
+      }
+    } catch { /* silent */ }
   };
+
+  if (loadingData) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -80,13 +114,20 @@ export default function AdminUsersPage() {
             <tbody>
               {filtered.map(u => (
                 <tr key={u.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center"><User className="w-4 h-4 text-gray-500" /></div><span className="font-medium text-gray-900">{u.name}</span></div></td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                        {u.avatar ? <img src={u.avatar} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-gray-500" />}
+                      </div>
+                      <span className="font-medium text-gray-900">{u.name}</span>
+                    </div>
+                  </td>
                   <td className="px-4 py-3 hidden md:table-cell text-gray-600">{u.email}</td>
                   <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${roleColors[u.role] || 'bg-gray-100 text-gray-700'}`}>{u.role.replace(/_/g, ' ')}</span></td>
-                  <td className="px-4 py-3 hidden lg:table-cell text-gray-600">{u.joined}</td>
+                  <td className="px-4 py-3 hidden lg:table-cell text-gray-600">{u.createdAt?.split('T')[0]}</td>
                   <td className="px-4 py-3">
-                    <button onClick={() => toggleStatus(u)} className={`px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer ${u.status === 'active' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
-                      {u.status}
+                    <button onClick={() => toggleStatus(u)} className={`px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer ${u.isVerified ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
+                      {u.isVerified ? 'active' : 'suspended'}
                     </button>
                   </td>
                   <td className="px-4 py-3">
@@ -97,6 +138,7 @@ export default function AdminUsersPage() {
             </tbody>
           </table>
         </div>
+        <p className="text-sm text-gray-500 mt-4">{filtered.length} of {users.length} users</p>
       </div>
 
       {/* Edit Modal */}
@@ -131,8 +173,8 @@ export default function AdminUsersPage() {
             </div>
             <div className="flex justify-end gap-2 p-6 border-t">
               <button onClick={() => setEditingUser(null)} className="px-4 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium">Cancel</button>
-              <button onClick={handleSave} className="flex items-center gap-2 px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition">
-                <Save className="w-4 h-4" /> Save Changes
+              <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-5 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white text-sm font-semibold rounded-lg transition">
+                <Save className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>

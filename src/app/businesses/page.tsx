@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, MapPin, Star, Shield, ChevronDown, SlidersHorizontal, Building2, Phone, Globe, ChevronLeft, ChevronRight, CheckCircle } from 'lucide-react';
-import { businesses } from '@/data/businesses';
+import { Search, MapPin, Star, Shield, SlidersHorizontal, Building2, Phone, Globe, ChevronLeft, ChevronRight, CheckCircle } from 'lucide-react';
 import { categories } from '@/data/categories';
 import { dzongkhags } from '@/data/locations';
+import { Business } from '@/types';
 
 export default function BusinessesPage() {
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
@@ -17,6 +19,21 @@ export default function BusinessesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const perPage = 12;
+
+  // Fetch businesses from API (reads from in-memory store, reflects edits)
+  useEffect(() => {
+    async function fetchBusinesses() {
+      try {
+        const res = await fetch('/api/businesses?limit=200');
+        if (res.ok) {
+          const data = await res.json();
+          setBusinesses(data.businesses || []);
+        }
+      } catch { /* silent */ }
+      finally { setLoadingData(false); }
+    }
+    fetchBusinesses();
+  }, []);
 
   const filtered = useMemo(() => {
     let result = [...businesses];
@@ -35,12 +52,20 @@ export default function BusinessesPage() {
       case 'name': result.sort((a, b) => a.name.localeCompare(b.name)); break;
     }
     return result;
-  }, [searchQuery, selectedCategory, selectedLocation, minRating, verifiedOnly, sortBy]);
+  }, [businesses, searchQuery, selectedCategory, selectedLocation, minRating, verifiedOnly, sortBy]);
 
   const totalPages = Math.ceil(filtered.length / perPage);
   const paginated = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
 
   const getCategoryName = (id: string) => categories.find(c => c.id === id)?.name || '';
+
+  if (loadingData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -131,12 +156,17 @@ export default function BusinessesPage() {
               {paginated.map(biz => (
                 <Link key={biz.id} href={`/businesses/${biz.slug}`} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
                   <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-gray-900 line-clamp-1">{biz.name}</h3>
-                        {biz.verificationStatus === 'verified' && <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />}
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {biz.logo ? <img src={biz.logo} alt="" className="w-full h-full object-cover" /> : <span className="text-sm font-bold text-orange-500">{biz.name.charAt(0)}</span>}
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5">{getCategoryName(biz.categoryId)}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-gray-900 line-clamp-1">{biz.name}</h3>
+                          {biz.verificationStatus === 'verified' && <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-0.5">{getCategoryName(biz.categoryId)}</p>
+                      </div>
                     </div>
                     {biz.isPremium && <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">Premium</span>}
                   </div>

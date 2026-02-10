@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Search,
@@ -30,11 +30,7 @@ import {
 
 import { getFeaturedCategories } from '@/data/categories';
 import { getTopDzongkhags } from '@/data/locations';
-import {
-  getTopRatedBusinesses,
-  getFeaturedBusinesses,
-  getNewBusinesses,
-} from '@/data/businesses';
+import { Business } from '@/types';
 import {
   sampleDeals,
   sampleJobs,
@@ -45,6 +41,7 @@ import { platformAnalytics } from '@/data/analytics';
 
 export default function HomePage() {
   const [heroSearch, setHeroSearch] = useState('');
+  const [topRatedBusinesses, setTopRatedBusinesses] = useState<Business[]>([]);
 
   const handleHeroSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,11 +50,22 @@ export default function HomePage() {
     }
   };
 
+  // Fetch businesses from API so edits reflect on homepage
+  useEffect(() => {
+    async function fetchBusinesses() {
+      try {
+        const res = await fetch('/api/businesses?sort=rating&limit=6');
+        if (res.ok) {
+          const data = await res.json();
+          setTopRatedBusinesses(data.businesses || []);
+        }
+      } catch { /* silent */ }
+    }
+    fetchBusinesses();
+  }, []);
+
   const featuredCategories = getFeaturedCategories();
   const topDzongkhags = getTopDzongkhags(6);
-  const topRatedBusinesses = getTopRatedBusinesses(6);
-  const featuredBusinesses = getFeaturedBusinesses();
-  const newBusinesses = getNewBusinesses(6);
 
   const popularSearches = [
     'Hotels',

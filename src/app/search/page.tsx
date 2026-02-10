@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, Suspense } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -18,9 +18,9 @@ import {
   AlertCircle,
   TrendingUp,
 } from 'lucide-react';
-import { searchBusinesses, businesses } from '@/data/businesses';
 import { categories } from '@/data/categories';
 import { dzongkhags } from '@/data/locations';
+import { Business } from '@/types';
 
 type SortOption = 'relevance' | 'rating' | 'reviews' | 'name';
 
@@ -36,6 +36,21 @@ function SearchPageContent() {
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('relevance');
   const [showFilters, setShowFilters] = useState(false);
+  const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
+
+  // Fetch businesses from API (reads from in-memory store, reflects edits)
+  useEffect(() => {
+    async function fetchBusinesses() {
+      try {
+        const res = await fetch('/api/businesses?limit=200');
+        if (res.ok) {
+          const data = await res.json();
+          setAllBusinesses(data.businesses || []);
+        }
+      } catch { /* silent */ }
+    }
+    fetchBusinesses();
+  }, []);
 
   const popularSearches = [
     'Hotels in Thimphu',
@@ -49,7 +64,17 @@ function SearchPageContent() {
   ];
 
   const results = useMemo(() => {
-    let filtered = searchTerm ? searchBusinesses(searchTerm) : [...businesses];
+    let filtered = [...allBusinesses];
+
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      filtered = filtered.filter(b =>
+        b.name.toLowerCase().includes(q) ||
+        b.description.toLowerCase().includes(q) ||
+        b.keywords.some(k => k.toLowerCase().includes(q)) ||
+        b.shortDescription.toLowerCase().includes(q)
+      );
+    }
 
     if (selectedCategory) {
       filtered = filtered.filter((b) => b.categoryId === selectedCategory);
@@ -82,7 +107,7 @@ function SearchPageContent() {
     }
 
     return filtered;
-  }, [searchTerm, selectedCategory, selectedLocation, selectedRating, verifiedOnly, sortBy]);
+  }, [allBusinesses, searchTerm, selectedCategory, selectedLocation, selectedRating, verifiedOnly, sortBy]);
 
   const handleSearch = () => {
     setSearchTerm(query);
@@ -102,7 +127,7 @@ function SearchPageContent() {
 
   const hasActiveFilters = selectedCategory || selectedLocation || selectedRating > 0 || verifiedOnly;
 
-  const uniqueLocations = Array.from(new Set(businesses.map((b) => b.dzongkhag))).sort();
+  const uniqueLocations = Array.from(new Set(allBusinesses.map((b) => b.dzongkhag))).sort();
 
   return (
     <main className="min-h-screen bg-gray-50">

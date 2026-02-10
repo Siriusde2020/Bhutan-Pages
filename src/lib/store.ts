@@ -424,8 +424,14 @@ export function getPlatformAnalytics() {
 // SEARCH OPERATIONS
 // ============================================================
 
-export function searchBusinesses(query: string, filters?: { category?: string; dzongkhag?: string; rating?: number; verified?: boolean; sort?: string }) {
-  let results = [...store.businesses].filter(b => b.status === 'active');
+export function searchBusinesses(query: string, filters?: { category?: string; dzongkhag?: string; rating?: number; verified?: boolean; sort?: string; status?: string }) {
+  let results = [...store.businesses];
+  // Filter by status: 'all' returns everything, specific value filters to that, default is 'active'
+  if (filters?.status && filters.status !== 'all') {
+    results = results.filter(b => b.status === filters.status);
+  } else if (!filters?.status) {
+    results = results.filter(b => b.status === 'active');
+  }
 
   if (query) {
     const q = query.toLowerCase();

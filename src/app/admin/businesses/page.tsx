@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, ChevronLeft, CheckCircle, XCircle, Eye, Edit, Save, X, Upload, Camera } from 'lucide-react';
-import { businesses as allBusinesses } from '@/data/businesses';
+import { Search, ChevronLeft, CheckCircle, XCircle, Eye, Edit, Save, X, Camera } from 'lucide-react';
 import { categories } from '@/data/categories';
 import { Business } from '@/types';
 
@@ -19,7 +18,23 @@ export default function AdminBusinessesPage() {
   const [editLogo, setEditLogo] = useState('');
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState('');
-  const [businessList, setBusinessList] = useState(allBusinesses);
+  const [businessList, setBusinessList] = useState<Business[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+
+  // Fetch businesses from API (reads from in-memory store, not static data)
+  useEffect(() => {
+    async function fetchBusinesses() {
+      try {
+        const res = await fetch('/api/businesses?limit=200&status=all');
+        if (res.ok) {
+          const data = await res.json();
+          setBusinessList(data.businesses || []);
+        }
+      } catch { /* silent */ }
+      finally { setLoadingData(false); }
+    }
+    fetchBusinesses();
+  }, []);
 
   const filtered = businessList.filter(b => {
     const matchSearch = !search || b.name.toLowerCase().includes(search.toLowerCase());
@@ -80,6 +95,14 @@ export default function AdminBusinessesPage() {
       }
     } catch { /* silent */ }
   };
+
+  if (loadingData) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
