@@ -25,8 +25,8 @@ function generateId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 }
 
-function generateToken(): string {
-  return `tok_${Date.now()}_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+function generateToken(userId: string): string {
+  return `tok_${userId}_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
 }
 
 // Seed users
@@ -93,7 +93,7 @@ export function authenticateUser(email: string, password: string): { user: User;
   const user = store.users.find(u => u.email === email);
   if (!user) return null;
 
-  const token = generateToken();
+  const token = generateToken(user.id);
   store.sessions.set(token, { userId: user.id, expiresAt: Date.now() + 24 * 60 * 60 * 1000 });
 
   user.lastActive = new Date().toISOString();
@@ -119,7 +119,7 @@ export function registerUser(name: string, email: string, phone: string, passwor
   store.users.push(user);
   passwords.set(email, password);
 
-  const token = generateToken();
+  const token = generateToken(user.id);
   store.sessions.set(token, { userId: user.id, expiresAt: Date.now() + 24 * 60 * 60 * 1000 });
 
   return { user, token };
@@ -127,11 +127,30 @@ export function registerUser(name: string, email: string, phone: string, passwor
 
 export function getUserFromToken(token: string): User | null {
   const session = store.sessions.get(token);
-  if (!session || session.expiresAt < Date.now()) {
-    if (session) store.sessions.delete(token);
-    return null;
+  if (session) {
+    if (session.expiresAt < Date.now()) {
+      store.sessions.delete(token);
+      return null;
+    }
+    return store.users.find(u => u.id === session.userId) || null;
   }
-  return store.users.find(u => u.id === session.userId) || null;
+
+  // Fallback: extract userId from token format tok_{userId}_{timestamp}_{random}
+  // This handles cases where in-memory sessions are lost (e.g., HMR, server restart)
+  if (token.startsWith('tok_')) {
+    const parts = token.split('_');
+    if (parts.length >= 3) {
+      const userId = parts.slice(1, parts.length - 2).join('_');
+      const user = store.users.find(u => u.id === userId);
+      if (user) {
+        // Re-create session
+        store.sessions.set(token, { userId: user.id, expiresAt: Date.now() + 24 * 60 * 60 * 1000 });
+        return user;
+      }
+    }
+  }
+
+  return null;
 }
 
 export function logoutUser(token: string): void {

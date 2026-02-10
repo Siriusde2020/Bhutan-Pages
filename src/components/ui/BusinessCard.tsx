@@ -107,17 +107,19 @@ export default function BusinessCard({ business }: BusinessCardProps) {
           )}
 
           {/* Logo overlay */}
-          {logo && (
-            <div className="absolute -bottom-5 left-4">
-              <div className="h-12 w-12 overflow-hidden rounded-lg border-2 border-white bg-white shadow-md">
+          <div className="absolute -bottom-5 left-4">
+            <div className="h-12 w-12 overflow-hidden rounded-lg border-2 border-white bg-white shadow-md flex items-center justify-center">
+              {logo ? (
                 <img src={logo} alt={`${name} logo`} className="h-full w-full object-cover" />
-              </div>
+              ) : (
+                <span className="text-lg font-bold text-[#FF6B00]">{name.charAt(0)}</span>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Content */}
-        <div className={`p-4 ${logo ? 'pt-7' : 'pt-4'}`}>
+        <div className="p-4 pt-7">
           {/* Name and verification */}
           <div className="flex items-start gap-2">
             <h3 className="flex-1 text-lg font-semibold text-gray-900 transition-colors group-hover:text-[#FF6B00]">
